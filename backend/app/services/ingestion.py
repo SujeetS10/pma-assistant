@@ -4,6 +4,7 @@ from __future__ import annotations
 import gc
 import hashlib
 import logging
+import time
 import uuid
 from pathlib import Path
 
@@ -74,6 +75,8 @@ def process_document(svc: Services, doc_id: str) -> None:
         return
     path = next(iter(svc.settings.upload_dir.glob(f"{doc_id}.*")), None)
     svc.db.doc_update(doc_id, status="processing", error="")
+    t0 = time.time()
+    log.info("Processing %s started", doc_id)
     try:
         if path is None:
             raise ParseError("Stored file is missing.")
@@ -82,11 +85,13 @@ def process_document(svc: Services, doc_id: str) -> None:
         chunks = chunk_pages(pages, doc_id, s.chunk_chars, s.chunk_chars // 6)
         if not chunks:
             raise ParseError("No usable text found in the document.")
+        log.info("Parsed %s: %d pages, %d chunks (%.1fs). Embedding...", doc_id, len(pages), len(chunks),
+                 time.time() - t0)
         with svc.ingest_lock:
             svc.store.delete_document(doc_id)
             svc.store.add_chunks(chunks, row["title"])
         svc.db.doc_update(doc_id, status="ready", pages=len(pages), chunks=len(chunks), error="")
-        log.info("Indexed %s (%d chunks)", doc_id, len(chunks))
+        log.info("Indexed %s (%d chunks) in %.1fs", doc_id, len(chunks), time.time() - t0)
     except ParseError as e:
         svc.db.doc_update(doc_id, status="failed", error=str(e)[:500])
     except Exception:

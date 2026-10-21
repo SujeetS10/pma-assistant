@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,6 +81,7 @@ class VectorStore:
 
     # ---- writes -------------------------------------------------------------
     def add_chunks(self, chunks: list[Chunk], doc_title: str, batch: int = 32) -> None:
+        t0 = time.time()
         for i in range(0, len(chunks), batch):
             part = chunks[i : i + batch]
             vecs = np.asarray(self._embedder.encode([c.text for c in part]), dtype=np.float32)
@@ -99,6 +101,8 @@ class VectorStore:
                     "idx=excluded.idx, dim=excluded.dim, vec=excluded.vec",
                     rows,
                 )
+            log.info("Embedded %d/%d chunks (%.0fs elapsed)", min(i + batch, len(chunks)), len(chunks),
+                     time.time() - t0)
         self._invalidate()
 
     def delete_document(self, doc_id: str) -> None:

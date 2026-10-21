@@ -8,10 +8,15 @@ local memory. Vectors from different models are not comparable, so re-upload doc
 """
 from __future__ import annotations
 
+import logging
+import time
 from pathlib import Path
 from typing import Protocol
 
 import numpy as np
+
+
+log = logging.getLogger("pma.embed")
 
 
 class Embedder(Protocol):
@@ -38,8 +43,11 @@ class FastEmbedEmbedder:
         if self._model is None:
             from fastembed import TextEmbedding  # downloads the model on first run if not cached
 
+            t = time.time()
+            log.info("Loading embedding model %s (cache: %s)...", self.model_name, self.cache_dir)
             self._model = TextEmbedding(model_name=self.model_name, cache_dir=self.cache_dir,
                                         threads=self.threads)
+            log.info("Embedding model ready in %.1fs", time.time() - t)
         return self._model
 
     def encode(self, texts: list[str]) -> np.ndarray:
