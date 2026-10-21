@@ -1,0 +1,6 @@
+{"id": "q1", "type": "conceptual", "question": "What does Bayes' theorem say?", "answerable": true, "expected_doc": "synthetic_pma_notes", "expected_keywords": ["P(B \\mid A)", "total probability"]}
+{"id": "q2", "type": "mathematical", "question": "What are the mean and variance of a geometric random variable?", "answerable": true, "expected_doc": "synthetic_pma_notes", "expected_keywords": ["1/p", "(1-p)/p^2"]}
+{"id": "q3", "type": "conceptual", "question": "State the memoryless property.", "answerable": true, "expected_doc": "synthetic_pma_notes", "expected_keywords": ["memoryless"]}
+{"id": "q4", "type": "mathematical", "question": "What is the pmf of a Poisson random variable?", "answerable": true, "expected_doc": "synthetic_pma_notes", "expected_keywords": ["e^{-\\lambda}"]}
+{"id": "q5", "type": "conceptual", "question": "What condition defines a stationary distribution of a Markov chain?", "answerable": true, "expected_doc": "synthetic_pma_notes", "expected_keywords": ["\\pi P = \\pi"]}
+{"id": "q6", "type": "out_of_scope", "question": "Who won the 2018 FIFA World Cup?", "answerable": false}

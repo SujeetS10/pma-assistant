@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - pma_data:/data   # database + uploads + vectors + model cache persist across restarts and rebuilds
+    restart: unless-stopped
+
+volumes:
+  pma_data:
