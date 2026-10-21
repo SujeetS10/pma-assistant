@@ -4,3 +4,4 @@ __pycache__/
 .venv/
 eval_out/
 *.pyc
+.model_cache/

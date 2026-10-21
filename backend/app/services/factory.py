@@ -1,15 +1,15 @@
-"""Service container. Heavy parts (embedding model, Chroma, LLM client) are built lazily and once."""
+"""Service container. Heavy parts (embedding model, vector store, LLM client) are built lazily and once."""
 from __future__ import annotations
 
 import threading
 
 from ..config import Settings
 from ..db import Database
-from ..rag.embedding import SentenceTransformerEmbedder
+from ..rag.embedding import make_embedder
 from ..rag.llm_client import LLMClient
 from ..rag.rag import RagService
 from ..rag.retrieval import Retriever
-from ..rag.vector_store import ChromaStore
+from ..rag.vector_store import VectorStore
 
 
 class Services:
@@ -28,8 +28,7 @@ class Services:
     def store(self):
         with self._init_lock:
             if self._store is None:
-                self._store = ChromaStore(
-                    self.settings.chroma_path, SentenceTransformerEmbedder(self.settings.embedding_model))
+                self._store = VectorStore(self.settings.vector_db_path, make_embedder(self.settings))
             return self._store
 
     @property
@@ -47,7 +46,7 @@ class Services:
 
 # Used by evaluation/CLI scripts
 def build_retriever(s: Settings) -> Retriever:
-    store = ChromaStore(s.chroma_path, SentenceTransformerEmbedder(s.embedding_model))
+    store = VectorStore(s.vector_db_path, make_embedder(s))
     return Retriever(store, s.top_k, s.max_context_chunks, s.min_score)
 
 

@@ -18,7 +18,7 @@ pma-assistant/
 │   │   ├── main.py           FastAPI app: /api/* + serves the frontend
 │   │   ├── routers/          auth.py · student.py · admin.py   (thin HTTP layer)
 │   │   ├── services/         auth_service · ingestion · chat_service · factory (business logic, framework-free)
-│   │   ├── rag/              parsers · chunking · embedding · vector_store (Chroma) · retrieval · citations · llm_client · rag
+│   │   ├── rag/              parsers · chunking · embedding (ONNX/fastembed) · vector_store (SQLite+NumPy) · retrieval · citations · llm_client · rag
 │   │   ├── db.py             SQLite schema + queries      security.py   hashing, tokens, rate limits
 │   │   ├── config.py         settings from .env           deps.py       auth guards
 │   ├── scripts/              create_admin · ingest_cli · ask
@@ -26,7 +26,8 @@ pma-assistant/
 │   ├── tests/                47 offline tests
 │   ├── data_demo/            SYNTHETIC sample notes for smoke tests only
 │   ├── requirements.txt  Dockerfile
-├── data/                     CREATED AT RUNTIME, gitignored: app.db · uploads/ · chroma/   <- back this up
+├── data/                     CREATED AT RUNTIME, gitignored: app.db · vectors.db · uploads/   <- back this up
+├── render.yaml               Render free-plan blueprint
 ├── docker-compose.yml  .env.example  .gitignore
 ```
 
@@ -42,10 +43,24 @@ pip install -r requirements.txt
 uvicorn app.main:get_app --factory --reload
 ```
 
-Open http://localhost:8000. The first upload downloads the embedding model (needs internet once).
+Open http://localhost:8000. The embedding model (~90 MB) is downloaded once into `.model_cache/` (or run `python -m scripts.prefetch_model`).
 The LLM defaults to Groq (`https://api.groq.com/openai/v1`). Set `LLM_MODEL` to a model ID your account can use, e.g. `openai/gpt-oss-120b`. To use another OpenAI-compatible provider, also set `LLM_BASE_URL`.
 
 Docker instead: `docker compose up --build` (data lives in the `pma_data` volume and survives rebuilds).
+
+## Deploying on Render free (512 MB RAM)
+
+This build is memory-lean: embeddings run on ONNX Runtime (no PyTorch), vectors are stored in SQLite and searched
+with NumPy (no ChromaDB), and the server runs one worker. Expect roughly 250-350 MB in use.
+
+- Build command: `pip install --no-cache-dir -r backend/requirements.txt && cd backend && python -m scripts.prefetch_model`
+- Start command: `cd backend && uvicorn app.main:get_app --factory --host 0.0.0.0 --port $PORT --proxy-headers --workers 1`
+- Env vars: `PYTHON_VERSION=3.11.9`, `OMP_NUM_THREADS=1`, `MALLOC_ARENA_MAX=2`, `LLM_API_KEY`, `LLM_MODEL`,
+  `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `COOKIE_SECURE=true` (`render.yaml` sets all of this).
+- Still too tight? Set `EMBEDDING_PROVIDER=api` (plus `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_BASE_URL`) to
+  move embeddings to a hosted API; local memory then drops to ~150 MB. Re-upload documents after switching models.
+- **Free instances have an ephemeral disk**: uploads, the database, vectors and chats are wiped on every redeploy and
+  after restarts. A paid persistent disk (mounted at `DATA_DIR`) keeps them.
 
 ## How it works
 
@@ -85,8 +100,8 @@ document's title as shown in the admin table.
 
 ## Not yet verified (be aware before deploying)
 
-The offline test environment had no network, so FastAPI, Chroma, sentence-transformers, PyMuPDF and the LLM call were
-**never executed together**. Business logic, database, auth, chunking and the renderer are tested; the HTTP routers, Chroma
+The offline test environment had no network, so FastAPI, fastembed, PyMuPDF and the LLM call were
+**never executed together** (the memory-lean rewrite was likewise tested offline with a fake embedder). Business logic, database, auth, chunking and the renderer are tested; the HTTP routers, Chroma
 calls and the browser UI were only syntax-checked. Expect to fix small integration issues on first run. Also: KaTeX loads from
 a CDN (vendor it for offline sites), scanned PDFs need OCR, PDF equations can extract poorly, and there is no password reset
 UI for admins (edit `.env` and restart, or run `python -m scripts.create_admin --username NAME`).

@@ -40,9 +40,12 @@ def _parse_pdf(p: Path) -> list[Page]:
         doc = fitz.open(p)
     except Exception as e:
         raise ParseError(f"Could not open PDF: {e}") from e
-    if doc.needs_pass:
-        raise ParseError("PDF is encrypted; upload an unprotected copy.")
-    pages = [Page(i + 1, doc[i].get_text("text").strip()) for i in range(len(doc))]
+    try:
+        if doc.needs_pass:
+            raise ParseError("PDF is encrypted; upload an unprotected copy.")
+        pages = [Page(i + 1, doc[i].get_text("text").strip()) for i in range(len(doc))]
+    finally:
+        doc.close()  # release the native document memory right away
     if not any(pg.text for pg in pages):
         raise ParseError(
             "No extractable text (likely a scanned PDF). OCR it first, then re-upload."

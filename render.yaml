@@ -1,0 +1,27 @@
+# Render Blueprint for the free plan. Repo root = this folder (the one containing backend/ and frontend/).
+# If your GitHub repo has this folder as a subfolder, set "Root Directory" to it in the Render dashboard.
+services:
+  - type: web
+    name: pma-assistant
+    runtime: python
+    plan: free
+    buildCommand: pip install --no-cache-dir -r backend/requirements.txt && cd backend && python -m scripts.prefetch_model
+    startCommand: cd backend && uvicorn app.main:get_app --factory --host 0.0.0.0 --port $PORT --proxy-headers --workers 1
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: OMP_NUM_THREADS      # keep ONNX Runtime to one thread: lower peak memory on the 0.1 CPU free plan
+        value: "1"
+      - key: MALLOC_ARENA_MAX     # stops glibc from fragmenting memory across threads
+        value: "2"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

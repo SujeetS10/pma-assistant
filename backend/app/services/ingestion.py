@@ -1,6 +1,7 @@
 """Document lifecycle: register -> background index -> ready/failed -> delete. Framework-free."""
 from __future__ import annotations
 
+import gc
 import hashlib
 import logging
 import uuid
@@ -91,6 +92,8 @@ def process_document(svc: Services, doc_id: str) -> None:
     except Exception:
         log.exception("Indexing failed for %s", doc_id)
         svc.db.doc_update(doc_id, status="failed", error="Indexing failed; see the server log.")
+    finally:
+        gc.collect()  # hand parser/embedding temporaries back before the next request
 
 
 def delete_document(svc: Services, doc_id: str) -> bool:

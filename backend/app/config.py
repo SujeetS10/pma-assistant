@@ -33,10 +33,15 @@ class Settings:
     session_hours: int
     cookie_secure: bool
     max_upload_mb: int
+    # Memory-related options (defaults suit small hosts such as Render free).
+    embedding_provider: str = "local"  # "local" (ONNX, no PyTorch) or "api" (OpenAI-compatible /embeddings)
+    embedding_api_key: str = ""
+    embedding_base_url: str = ""
+    model_cache_dir: Path = REPO_ROOT / ".model_cache"
 
     @property
-    def chroma_path(self) -> str:
-        return str(self.data_dir / "chroma")
+    def vector_db_path(self) -> Path:
+        return self.data_dir / "vectors.db"
 
     @property
     def db_path(self) -> Path:
@@ -73,5 +78,9 @@ class Settings:
             admin_password=g("ADMIN_PASSWORD", ""),
             session_hours=int(g("SESSION_HOURS", "12")),
             cookie_secure=g("COOKIE_SECURE", "false").lower() == "true",
-            max_upload_mb=int(g("MAX_UPLOAD_MB", "50")),
+            max_upload_mb=int(g("MAX_UPLOAD_MB", "20")),
+            embedding_provider=g("EMBEDDING_PROVIDER", "local").strip().lower(),
+            embedding_api_key=g("EMBEDDING_API_KEY", ""),
+            embedding_base_url=g("EMBEDDING_BASE_URL", ""),
+            model_cache_dir=Path(g("MODEL_CACHE_DIR", str(REPO_ROOT / ".model_cache"))).resolve(),
         )
